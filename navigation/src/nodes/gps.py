@@ -19,12 +19,16 @@ class GPS:
         self.gps_pub = rospy.Publisher('/gps', NavSatFix, queue_size=1)
     
     def run(self):
+        """
+        Continuously publish GPS data
+        """
         rospy.loginfo("GPS node running...")
+        # Sending GPS data
         while not rospy.is_shutdown():
-            # Sending GPS data
             try: 
                 # Retrieve GPS data
                 coords = self.gps.geo_coords()
+                #if coords.lat > 42.2 and coords.lat < 42.3 and coords.lon > -71.7 and coords.lon < -71.9:
                 # Publish GPS data
                 gps_msg = NavSatFix()
                 gps_msg.header.stamp = rospy.Time.now()
