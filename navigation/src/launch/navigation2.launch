@@ -1,0 +1,7 @@
+<launch>
+<!-- <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch"/> -->
+<node name = "gps" pkg = "navigation" type = "gps.py"/> 
+<node name = "compass" pkg = "navigation" type = "cmps14.py"/> 
+<node name = "driveToPoint" pkg = "navigation" type = "driveToPoint.py"/>
+<include file="$(find vesc_driver)/launch/multi_vesc_driver_node.launch"/>
+</launch>
