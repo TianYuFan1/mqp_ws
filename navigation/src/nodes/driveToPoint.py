@@ -5,6 +5,7 @@ import os
 import time
 from std_msgs.msg import Float32, Float64
 from std_msgs.msg import Int16
+from std_msgs.msg import String
 from sensor_msgs.msg import NavSatFix
 
 import math
@@ -15,6 +16,7 @@ class pointDriver:
         rospy.Subscriber("/compass", Float32, self.headingCallback, queue_size=1)
         rospy.Subscriber("/gps", NavSatFix, self.gpsCoordsCallback, queue_size=1)
         rospy.Subscriber("/gps/setpoint", NavSatFix, self.goalCallback, queue_size=1)
+        rospy.Subscriber("/robotStatus", String, self.statusCallback, queue_size=1)
         self.pubRight1 = rospy.Publisher("/vesc_r1/commands/motor/speed", Float64, queue_size=1)
         self.pubRight2 = rospy.Publisher("/vesc_r2/commands/motor/speed", Float64, queue_size=1)
         self.pubLeft1  = rospy.Publisher("/vesc_l1/commands/motor/speed", Float64, queue_size=1)
@@ -27,6 +29,7 @@ class pointDriver:
         self.lon = 0
         
         self.goal = [20, -72]
+        self.status = "stop"
 
     def getBestAngle(self, targetAngle):
         dth = targetAngle - self.pth
@@ -47,6 +50,9 @@ class pointDriver:
     def goalCallback(self, msg):
         self.goal[0] = msg.latitude
         self.goal[1] = msg.longitude
+    
+    def statusCallback(self, msg):
+        self.status = msg.data
 
     def rotate(self, angle, aspeed):
         dir = self.getBestAngle(angle)
@@ -68,11 +74,18 @@ class pointDriver:
         # print(self.gth, self.goal, self.lat, self.lon)
     
     def sendSpeeds(self, rSpeed, lSpeed):
-        self.pubRight1.publish(rSpeed)
-        self.pubRight2.publish(rSpeed)
-        self.pubLeft1.publish(lSpeed)
-        self.pubLeft2.publish(lSpeed)
-        print(rSpeed, lSpeed)
+        if self.status == "drive":
+            self.pubRight1.publish(rSpeed)
+            self.pubRight2.publish(rSpeed)
+            self.pubLeft1.publish(lSpeed)
+            self.pubLeft2.publish(lSpeed)
+            print(rSpeed, lSpeed)
+        else:
+            self.pubRight1.publish(0)
+            self.pubRight2.publish(0)
+            self.pubLeft1.publish(0)
+            self.pubLeft2.publish(0)
+            print("stopped")
     
     def run(self):
         linspeed = 20000

@@ -21,6 +21,7 @@ class Navigation:
         # Subscribers
         rospy.Subscriber("/gps", NavSatFix, self.gps_cb)
         rospy.Subscriber("/compass", Float32, self.compass_cb)
+        self.pubSetpoint = rospy.Publisher("/gps/setpoint", NavSatFix, queue_size=1)
         rospy.sleep(0.5)
     
     def gps_cb(self, msg):
@@ -85,6 +86,14 @@ class Navigation:
                     print(angle_travel)
                     print(self.dest_distance(self.location, waypoint.coord))
                     print("Not within area")
+                    
+                    msg = NavSatFix()
+                    msg.header = self.get_header()
+                    msg.header.frame_id = "gps"
+                    msg.latitude = waypoint.coord[1]
+                    msg.longitude = waypoint.coord[0]
+                    msg.altitud = 0
+                    self.pubSetpoint.publish(msg)
             rospy.sleep(0.5)
 
         # while not rospy.is_shutdown():

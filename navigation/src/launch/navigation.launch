@@ -2,5 +2,4 @@
 <!-- <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch"/> -->
 <node name = "gps" pkg = "navigation" type = "gps.py"/> 
 <node name = "compass" pkg = "navigation" type = "cmps14.py"/> 
-
 </launch>
