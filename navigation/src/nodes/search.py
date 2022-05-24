@@ -12,8 +12,10 @@ from typing import Protocol, Dict, List, Iterator, Tuple, TypeVar, Optional
 class Search:
 
     def __init__(self):
-        nodes_path = "../text/nodes.txt"
-        edges_path = "../text/edges.txt"
+        # nodes_path = "../text/nodes.txt"
+        # edges_path = "../text/edges.txt"
+        nodes_path = "/home/ubuntu/mqp_ws/src/navigation/src/text/nodes.txt"
+        edges_path = "/home/ubuntu/mqp_ws/src/navigation/src/text/edges.txt"
         self.nodes = self.load_nodes(nodes_path)
         self.load_edges(edges_path)
 

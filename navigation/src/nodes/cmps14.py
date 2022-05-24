@@ -34,7 +34,8 @@ class Compass:
                 result = self.bus.read_i2c_block_data(self.address, self.reg, 2)
                 value = (((result[0] & 0xFF) << 8) | (result[1] & 0xFF)) / 10
                 # Publish compass data
-                self.pub.publish(value-180)
+                # self.pub.publish(value+90-40)
+                self.pub.publish(value)
                 print(value)
             except (ValueError, IOError) as err:
                 rospy.loginfo("Compass error")

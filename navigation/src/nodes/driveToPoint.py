@@ -7,6 +7,7 @@ from std_msgs.msg import Float32, Float64
 from std_msgs.msg import Int16
 from std_msgs.msg import String
 from sensor_msgs.msg import NavSatFix
+from geometry_msgs.msg import Point
 
 import math
 
@@ -15,12 +16,15 @@ class pointDriver:
         rospy.init_node("pointDriver")
         rospy.Subscriber("/compass", Float32, self.headingCallback, queue_size=1)
         rospy.Subscriber("/gps", NavSatFix, self.gpsCoordsCallback, queue_size=1)
-        rospy.Subscriber("/gps/setpoint", NavSatFix, self.goalCallback, queue_size=1)
+        rospy.Subscriber("/gps/setpoint", Point, self.goalCallback, queue_size=1)
         rospy.Subscriber("/robotStatus", String, self.statusCallback, queue_size=1)
-        self.pubRight1 = rospy.Publisher("/vesc_r1/commands/motor/speed", Float64, queue_size=1)
-        self.pubRight2 = rospy.Publisher("/vesc_r2/commands/motor/speed", Float64, queue_size=1)
-        self.pubLeft1  = rospy.Publisher("/vesc_l1/commands/motor/speed", Float64, queue_size=1)
-        self.pubLeft2  = rospy.Publisher("/vesc_l2/commands/motor/speed", Float64, queue_size=1)
+        rospy.Subscriber("/obstacleStatus", String, self.statusObsCallback, queue_size=1)
+        rospy.Subscriber("/turn_angle", Float32, self.turnCallback, queue_size=1)
+
+        self.pubRight1 = rospy.Publisher("/vesc_r1/commands/motor/duty_cycle", Float64, queue_size=1)
+        self.pubRight2 = rospy.Publisher("/vesc_r2/commands/motor/duty_cycle", Float64, queue_size=1)
+        self.pubLeft1  = rospy.Publisher("/vesc_l1/commands/motor/duty_cycle", Float64, queue_size=1)
+        self.pubLeft2  = rospy.Publisher("/vesc_l2/commands/motor/duty_cycle", Float64, queue_size=1)
 
         self.pth = 0.0
         self.gth = 0.0
@@ -28,8 +32,13 @@ class pointDriver:
         self.lat = 0
         self.lon = 0
         
-        self.goal = [20, -72]
-        self.status = "stop"
+        self.turnAngle = 0
+        self.goal = None
+        self.status = "stopped"
+        self.statusObs = "blocked"
+    
+    def turnCallback(self, msg):
+        self.turnAngle = msg.data
 
     def getBestAngle(self, targetAngle):
         dth = targetAngle - self.pth
@@ -48,11 +57,15 @@ class pointDriver:
         self.lon = msg.longitude
 
     def goalCallback(self, msg):
-        self.goal[0] = msg.latitude
-        self.goal[1] = msg.longitude
+        self.goal = [0,0]
+        self.goal[0] = msg.x
+        self.goal[1] = msg.y
     
     def statusCallback(self, msg):
         self.status = msg.data
+
+    def statusObsCallback(self, msg):
+        self.statusObs = msg.data
 
     def rotate(self, angle, aspeed):
         dir = self.getBestAngle(angle)
@@ -74,9 +87,10 @@ class pointDriver:
         # print(self.gth, self.goal, self.lat, self.lon)
     
     def sendSpeeds(self, rSpeed, lSpeed):
+        # if self.status == "drive" and self.statusObs == "clear":
         if self.status == "drive":
-            self.pubRight1.publish(rSpeed)
-            self.pubRight2.publish(rSpeed)
+            self.pubRight1.publish(-rSpeed)
+            self.pubRight2.publish(-rSpeed)
             self.pubLeft1.publish(lSpeed)
             self.pubLeft2.publish(lSpeed)
             print(rSpeed, lSpeed)
@@ -85,18 +99,25 @@ class pointDriver:
             self.pubRight2.publish(0)
             self.pubLeft1.publish(0)
             self.pubLeft2.publish(0)
-            print("stopped")
+            # print("stopped")
     
     def run(self):
-        linspeed = 20000
-        aspeed = 10000
+        linspeed = 0.1
+        aspeed = 0.08
         while not rospy.is_shutdown():
+            if self.goal is None or self.lat == 0 or self.lon == 0:
+                continue
             self.angleToGoal()
-            print(self.getBestAngle(self.gth), self.goal)
-            if abs(self.getBestAngle(self.gth)) > 20:  
-                self.rotate(self.gth, aspeed)
+            # print(self.turnAngle)
+            # if abs(self.getBestAngle(self.gth)) > 5:  
+            if abs(self.turnAngle) > 10:  
+                # self.rotate(self.turn_angle, aspeed)
+                if self.turnAngle < 0:
+                    self.sendSpeeds(aspeed,-aspeed)
+                else:
+                    self.sendSpeeds(-aspeed,aspeed)
             else:
-                self.drive(linspeed)
+                self.drive(-linspeed)
             rospy.sleep(.01)
 
 driver = pointDriver()

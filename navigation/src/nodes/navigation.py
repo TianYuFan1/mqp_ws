@@ -5,6 +5,7 @@ import rospy
 from sensor_msgs.msg import NavSatFix
 from std_msgs.msg import Float32
 from search import Search
+from geometry_msgs.msg import Point
 
 class Navigation:
 
@@ -21,7 +22,9 @@ class Navigation:
         # Subscribers
         rospy.Subscriber("/gps", NavSatFix, self.gps_cb)
         rospy.Subscriber("/compass", Float32, self.compass_cb)
-        self.pubSetpoint = rospy.Publisher("/gps/setpoint", NavSatFix, queue_size=1)
+        rospy.Subscriber("/goal", Point, self.goal_cb)
+        self.pubSetpoint = rospy.Publisher("/gps/setpoint", Point, queue_size=1)
+        self.pubTurnAngle = rospy.Publisher("/turn_angle", Float32, queue_size=1)
         rospy.sleep(0.5)
     
     def gps_cb(self, msg):
@@ -30,7 +33,10 @@ class Navigation:
     def compass_cb(self, msg):        
         self.heading = msg.data
 
-        
+    def goal_cb(self, msg):
+        self.goal = [msg.x, msg.y]
+
+
     def dest_angle(self, start, end):
         lon_diff = end[0] - start[0]
         lat_diff = end[1] - start[1]
@@ -49,7 +55,7 @@ class Navigation:
         
     def run(self):
         # start = [-71.8077749, 42.2744825]
-        self.goal = [-71.8086798, 42.274100399999995]
+        # self.goal = [-71.8086798, 42.274100399999995]
 
         search = Search()
         # path = search.run(start, self.goal)
@@ -62,6 +68,8 @@ class Navigation:
                 print("Not fixed")
             elif self.heading is None:
                 print("No heading")
+            elif self.goal is None:
+                print("No goal")
             else:
                 path = search.run(self.location, self.goal)
                 if len(path) > 2:
@@ -83,41 +91,21 @@ class Navigation:
                     while angle_travel > 180:
                         angle_travel -= 360
 
+                    angle = Float32()
+                    angle.data = angle_travel
+
+                    self.pubTurnAngle.publish(angle)
+
                     print(angle_travel)
                     print(self.dest_distance(self.location, waypoint.coord))
                     print("Not within area")
                     
-                    msg = NavSatFix()
-                    msg.header = self.get_header()
-                    msg.header.frame_id = "gps"
-                    msg.latitude = waypoint.coord[1]
-                    msg.longitude = waypoint.coord[0]
-                    msg.altitud = 0
+                    msg = Point()
+                    msg.y = waypoint.coord[1]
+                    msg.x = waypoint.coord[0]
+                    msg.z = 0
                     self.pubSetpoint.publish(msg)
             rospy.sleep(0.5)
-
-        # while not rospy.is_shutdown():
-        #     while self.heading is None:
-        #         pass
-        #     # loc_angle_diff = self.dest_angle(self.location, self.goal)
-        #     loc_angle_diff = 0
-        #     print(self.heading - loc_angle_diff)
-        # while (abs(self.heading - loc_angle_diff) > 5):
-        #     print("Keep on turning")
-        #     print(abs(self.heading - loc_angle_diff))
-        #     rospy.sleep(0.5)
-        
-        # loc_dest_diff = self.dest_distance(self.location, self.goal)
-
-        # while (self.dest_distance(self.location, self.goal) > 5):
-        #     print("Keep on walking")
-        #     print(self.dest_distance(self.location, self.goal))
-        #     rospy.sleep(0.5)
-
-        
-        # print("Keep on arrived")
-
-        # rospy.spin()
 
 nav = Navigation()
 nav.run()

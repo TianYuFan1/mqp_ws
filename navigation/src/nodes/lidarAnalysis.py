@@ -14,7 +14,7 @@ class lidarAnalysis:
 
     def scanCallback(self, msg):
         front = 0
-        range = 90 * math.pi / 180
+        range = 10 * math.pi / 180
         angleStart = front - range / 2
         indexStart = int((angleStart - msg.angle_min) / msg.angle_increment)
         angleEnd = front + range / 2
